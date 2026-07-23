@@ -1,0 +1,28 @@
+[0.504s] Invoking command in '/home/richi/proyecto-tesis/rover_ws/src/rover_core': PYTHONPATH=/home/richi/proyecto-tesis/rover_ws/build/rover_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/richi/proyecto-tesis/rover_ws/install/rover_core/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_core build --build-base /home/richi/proyecto-tesis/rover_ws/build/rover_core/build install --record /home/richi/proyecto-tesis/rover_ws/build/rover_core/install.log --install-scripts $base/lib/rover_core --single-version-externally-managed install_data
+[0.725s] running egg_info
+[0.726s] writing ../../build/rover_core/rover_core.egg-info/PKG-INFO
+[0.727s] writing dependency_links to ../../build/rover_core/rover_core.egg-info/dependency_links.txt
+[0.727s] writing entry points to ../../build/rover_core/rover_core.egg-info/entry_points.txt
+[0.727s] writing requirements to ../../build/rover_core/rover_core.egg-info/requires.txt
+[0.727s] writing top-level names to ../../build/rover_core/rover_core.egg-info/top_level.txt
+[0.730s] reading manifest file '../../build/rover_core/rover_core.egg-info/SOURCES.txt'
+[0.732s] writing manifest file '../../build/rover_core/rover_core.egg-info/SOURCES.txt'
+[0.732s] running build
+[0.732s] running build_py
+[0.733s] copying rover_core/serial_bridge.py -> /home/richi/proyecto-tesis/rover_ws/build/rover_core/build/lib/rover_core
+[0.733s] running install
+[0.733s] running install_lib
+[0.735s] copying /home/richi/proyecto-tesis/rover_ws/build/rover_core/build/lib/rover_core/serial_bridge.py -> /home/richi/proyecto-tesis/rover_ws/install/rover_core/lib/python3.10/site-packages/rover_core
+[0.735s] byte-compiling /home/richi/proyecto-tesis/rover_ws/install/rover_core/lib/python3.10/site-packages/rover_core/serial_bridge.py to serial_bridge.cpython-310.pyc
+[0.737s] running install_data
+[0.737s] creating /home/richi/proyecto-tesis/rover_ws/install/rover_core/share/rover_core/launch
+[0.739s] copying launch/bringup.launch.py -> /home/richi/proyecto-tesis/rover_ws/install/rover_core/share/rover_core/launch
+[0.739s] creating /home/richi/proyecto-tesis/rover_ws/install/rover_core/share/rover_core/config
+[0.739s] copying config/nav2_params.yaml -> /home/richi/proyecto-tesis/rover_ws/install/rover_core/share/rover_core/config
+[0.739s] running install_egg_info
+[0.741s] removing '/home/richi/proyecto-tesis/rover_ws/install/rover_core/lib/python3.10/site-packages/rover_core-0.0.0-py3.10.egg-info' (and everything under it)
+[0.741s] Copying ../../build/rover_core/rover_core.egg-info to /home/richi/proyecto-tesis/rover_ws/install/rover_core/lib/python3.10/site-packages/rover_core-0.0.0-py3.10.egg-info
+[0.742s] running install_scripts
+[0.770s] Installing serial_bridge script to /home/richi/proyecto-tesis/rover_ws/install/rover_core/lib/rover_core
+[0.770s] writing list of installed files to '/home/richi/proyecto-tesis/rover_ws/build/rover_core/install.log'
+[0.796s] Invoked command in '/home/richi/proyecto-tesis/rover_ws/src/rover_core' returned '0': PYTHONPATH=/home/richi/proyecto-tesis/rover_ws/build/rover_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/richi/proyecto-tesis/rover_ws/install/rover_core/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/rover_core build --build-base /home/richi/proyecto-tesis/rover_ws/build/rover_core/build install --record /home/richi/proyecto-tesis/rover_ws/build/rover_core/install.log --install-scripts $base/lib/rover_core --single-version-externally-managed install_data
