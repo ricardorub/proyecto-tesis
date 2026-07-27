@@ -1,0 +1,23 @@
+# ROS 2 build artifacts
+rover_ws/build/
+rover_ws/install/
+rover_ws/log/
+
+# Python virtual environments
+venv/
+.venv/
+computacion_a_bordo/venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files (sensitive info)
+.env
+.env.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
