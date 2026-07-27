@@ -7,6 +7,10 @@ rover_ws/log/
 venv/
 .venv/
 computacion_a_bordo/venv/
+monitoreo_robot/env/
+env/
+node_modules/
+*node_modules/
 
 # Python cache files
 __pycache__/

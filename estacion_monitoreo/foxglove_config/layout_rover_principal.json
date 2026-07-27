@@ -1,0 +1,51 @@
+{
+  "layout": {
+    "first": "ThreeDeePanel!3d_rover_view",
+    "second": {
+      "first": "Plot!linear_speed_plot",
+      "second": "Teleop!rover_controller",
+      "direction": "column"
+    },
+    "direction": "row"
+  },
+  "configById": {
+    "ThreeDeePanel!3d_rover_view": {
+      "layers": {
+        "grid": {
+          "visible": true,
+          "frameId": "odom"
+        },
+        "tf": {
+          "visible": true
+        }
+      },
+      "publish": {
+        "type": "point",
+        "topic": "/clicked_point"
+      },
+      "followMode": "follow",
+      "followTfFrameId": "base_link"
+    },
+    "Plot!linear_speed_plot": {
+      "title": "Velocidad Lineal Real (ROS 2)",
+      "paths": [
+        {
+          "value": "/odom.twist.twist.linear.x",
+          "enabled": true,
+          "color": "#00b0ff"
+        }
+      ],
+      "minYValue": 0,
+      "maxYValue": 2,
+      "showLegend": true
+    },
+    "Teleop!rover_controller": {
+      "publishTopic": "/cmd_vel"
+    }
+  },
+  "globalVariables": {},
+  "userVariables": {},
+  "playbackConfig": {
+    "speed": 1
+  }
+}

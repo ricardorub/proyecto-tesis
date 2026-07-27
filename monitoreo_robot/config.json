@@ -1,0 +1,8 @@
+{
+  "rosbridge_ip": "192.168.1.3",
+  "rosbridge_port": 9090,
+  "rtsp_url": "rtsp://192.168.1.3:554/11",
+  "stream_mode": "ros",
+  "direct_url": "http://192.168.1.3:81/videostream.cgi",
+  "image_topic": "/camera/image_processed"
+}
