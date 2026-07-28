@@ -64,6 +64,10 @@ class DetectionNode(Node):
         self.declare_parameter('lying_down_ratio', 1.2)
         # Frecuencia de procesamiento de frames (FPS a procesar para no sobrecargar el CPU)
         self.declare_parameter('processing_fps', 10.0)
+        # Tamaño de imagen para la inferencia YOLO (320 es ideal para CPU de laptop)
+        self.declare_parameter('imgsz', 320)
+        # Dispositivo de ejecución (cpu, cuda, etc.)
+        self.declare_parameter('device', 'cpu')
 
         # Verificar si ultralytics está instalado
         if not ULTRALYTICS_AVAILABLE:
@@ -118,9 +122,11 @@ class DetectionNode(Node):
         # Parámetros dinámicos
         conf_thresh = self.get_parameter('conf_threshold').get_parameter_value().double_value
         lying_ratio = self.get_parameter('lying_down_ratio').get_parameter_value().double_value
+        img_sz = self.get_parameter('imgsz').get_parameter_value().integer_value
+        dev = self.get_parameter('device').get_parameter_value().string_value
 
         # Realizar la inferencia con YOLO
-        results = self.model(frame, verbose=False)[0]
+        results = self.model(frame, device=dev, imgsz=img_sz, verbose=False)[0]
 
         # Contadores para las métricas de detección
         stats = {

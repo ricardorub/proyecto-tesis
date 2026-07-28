@@ -34,7 +34,9 @@ def generate_launch_description():
                 'model_name': 'yolov8n.pt',
                 'conf_threshold': 0.25,
                 'lying_down_ratio': 1.2,
-                'processing_fps': 10.0
+                'processing_fps': 10.0,
+                'imgsz': 320,
+                'device': 'cpu'
             }]
         ),
         
