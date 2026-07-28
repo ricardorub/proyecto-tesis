@@ -406,27 +406,7 @@ def index():
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-title">Detección de Inteligencia Artificial (YOLO)</div>
-                    <div class="grid-metrics">
-                        <div class="metric-box">
-                            <div class="metric-label">Personas de Pie</div>
-                            <div id="metric-standing" class="metric-value">0</div>
-                        </div>
-                        <div class="metric-box" style="border-color: rgba(255, 0, 85, 0.2)">
-                            <div class="metric-label" style="color: var(--accent-danger)">Personas Recostadas</div>
-                            <div id="metric-lying" class="metric-value highlight" style="color: var(--accent-danger)">0</div>
-                        </div>
-                        <div class="metric-box">
-                            <div class="metric-label">Vehículos Detectados</div>
-                            <div id="metric-vehicles" class="metric-value">0</div>
-                        </div>
-                        <div class="metric-box">
-                            <div class="metric-label">Animales</div>
-                            <div id="metric-animals" class="metric-value">0</div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
             <!-- Panel Derecho: Controles -->
@@ -521,29 +501,10 @@ def index():
                 messageType: 'std_msgs/String'
             });
 
-            var detectionsTopic = new ROSLIB.Topic({
-                ros: ros,
-                name: '/camera/detections',
-                messageType: 'std_msgs/String'
-            });
-
             var imageCompressedTopic = new ROSLIB.Topic({
                 ros: ros,
                 name: '/camera/image_processed/compressed',
                 messageType: 'sensor_msgs/msg/CompressedImage'
-            });
-
-            // Suscribirse a las detecciones de YOLO
-            detectionsTopic.subscribe(function(message) {
-                try {
-                    var data = JSON.parse(message.data);
-                    document.getElementById('metric-standing').innerText = data.people_standing || 0;
-                    document.getElementById('metric-lying').innerText = data.people_lying || 0;
-                    document.getElementById('metric-vehicles').innerText = data.vehicles || 0;
-                    document.getElementById('metric-animals').innerText = data.animals || 0;
-                } catch(e) {
-                    console.error("Error procesando mensaje de detecciones: ", e);
-                }
             });
 
             // Suscribirse al stream de imagen comprimida en tiempo real
