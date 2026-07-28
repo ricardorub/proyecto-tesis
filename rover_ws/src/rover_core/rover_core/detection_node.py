@@ -57,7 +57,7 @@ class DetectionNode(Node):
         super().__init__('detection_node')
         
         # --- PARÁMETROS CONFIGURABLES ---
-        self.declare_parameter('rtsp_url', 'rtsp://192.168.1.3:554/11')
+        self.declare_parameter('rtsp_url', 'rtsp://admin:123456@192.168.1.3:554/11')
         self.declare_parameter('model_name', 'yolov8n.pt')
         self.declare_parameter('conf_threshold', 0.25)
         # Relación ancho/alto para considerar que una persona está recostada (típicamente > 1.2)
