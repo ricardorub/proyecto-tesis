@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 CAMERA_RTSP_URL = os.getenv("CAMERA_RTSP_URL", "rtsp://192.168.1.3:554/11")
 FASTAPI_PORT = int(os.getenv("FASTAPI_PORT", "8000"))
+ROBOT_IP = os.getenv("ROBOT_IP", "192.168.1.2")
 
 app = FastAPI(title="Rover Remote Monitor")
 
@@ -474,8 +475,8 @@ def index():
         </main>
 
         <script>
-            // Usar la misma IP de la laptop que sirve el frontend
-            var rover_ip = window.location.hostname;
+            // Usar la IP del robot configurada desde el backend
+            var rover_ip = "{ROBOT_IP}";
             var ros_port = "9090";
 
             var ros = new ROSLIB.Ros({
@@ -614,7 +615,7 @@ def index():
     </body>
     </html>
     """
-    return html_content
+    return html_content.replace("{ROBOT_IP}", ROBOT_IP)
 
 if __name__ == "__main__":
     uvicorn.run("main_api:app", host="0.0.0.0", port=FASTAPI_PORT, reload=True)
