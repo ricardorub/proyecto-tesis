@@ -197,7 +197,8 @@ class DetectionNode(Node):
         self.image_pub.publish(msg)
 
     def destroy_node(self):
-        self.camera.release()
+        if hasattr(self, 'camera') and self.camera is not None:
+            self.camera.release()
         super().destroy_node()
 
 def main(args=None):
