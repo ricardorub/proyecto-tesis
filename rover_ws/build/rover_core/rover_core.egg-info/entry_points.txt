@@ -1,3 +1,0 @@
-[console_scripts]
-serial_bridge = rover_core.serial_bridge:main
-
