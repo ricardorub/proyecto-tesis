@@ -58,6 +58,7 @@ class DetectionNode(Node):
         
         # --- PARÁMETROS CONFIGURABLES ---
         self.declare_parameter('rtsp_url', 'rtsp://admin:123456@192.168.1.3:554/11')
+        self.declare_parameter('enable_yolo', False)
         self.declare_parameter('model_name', 'yolov8n.pt')
         self.declare_parameter('conf_threshold', 0.25)
         # Relación ancho/alto para considerar que una persona está recostada (típicamente > 1.2)
@@ -69,29 +70,35 @@ class DetectionNode(Node):
         # Dispositivo de ejecución (cpu, cuda, etc.)
         self.declare_parameter('device', 'cpu')
 
-        # Verificar si ultralytics está instalado
-        if not ULTRALYTICS_AVAILABLE:
-            self.get_logger().error(
-                "\n\n======================================================\n"
-                "ERROR: La librería 'ultralytics' no está instalada.\n"
-                "Por favor, instálala en la laptop del robot con:\n"
-                "    pip3 install ultralytics\n"
-                "======================================================\n"
-            )
-            # Salimos para evitar fallos de ejecución
-            self.destroy_node()
-            rclpy.shutdown()
-            return
+        self.enable_yolo = self.get_parameter('enable_yolo').get_parameter_value().bool_value
 
-        # Cargar el modelo YOLOv8
-        model_file = self.get_parameter('model_name').get_parameter_value().string_value
-        self.get_logger().info(f"Cargando modelo YOLO: {model_file}...")
-        try:
-            self.model = YOLO(model_file)
-            self.get_logger().info("Modelo YOLO cargado exitosamente.")
-        except Exception as e:
-            self.get_logger().error(f"Fallo al cargar el modelo YOLO: {str(e)}")
-            return
+        self.model = None
+        if self.enable_yolo:
+            # Verificar si ultralytics está instalado
+            if not ULTRALYTICS_AVAILABLE:
+                self.get_logger().error(
+                    "\n\n======================================================\n"
+                    "ERROR: La librería 'ultralytics' no está instalada.\n"
+                    "Por favor, instálala en la laptop del robot con:\n"
+                    "    pip3 install ultralytics\n"
+                    "======================================================\n"
+                )
+                # Salimos para evitar fallos de ejecución
+                self.destroy_node()
+                rclpy.shutdown()
+                return
+
+            # Cargar el modelo YOLOv8
+            model_file = self.get_parameter('model_name').get_parameter_value().string_value
+            self.get_logger().info(f"Cargando modelo YOLO: {model_file}...")
+            try:
+                self.model = YOLO(model_file)
+                self.get_logger().info("Modelo YOLO cargado exitosamente.")
+            except Exception as e:
+                self.get_logger().error(f"Fallo al cargar el modelo YOLO: {str(e)}")
+                return
+        else:
+            self.get_logger().info("Detección YOLO desactivada. Transmitiendo video directo de baja latencia.")
 
         # Publicadores
         self.image_pub = self.create_publisher(Image, '/camera/image_processed', 10)
@@ -113,21 +120,12 @@ class DetectionNode(Node):
         fps = self.get_parameter('processing_fps').get_parameter_value().double_value
         timer_period = 1.0 / fps
         self.timer = self.create_timer(timer_period, self.process_frame)
-        self.get_logger().info(f"Nodo de detección iniciado. Procesando a {fps} FPS.")
+        self.get_logger().info(f"Nodo de streaming/detección iniciado. Procesando a {fps} FPS.")
 
     def process_frame(self):
         ret, frame = self.camera.read()
         if not ret or frame is None:
             return
-
-        # Parámetros dinámicos
-        conf_thresh = self.get_parameter('conf_threshold').get_parameter_value().double_value
-        lying_ratio = self.get_parameter('lying_down_ratio').get_parameter_value().double_value
-        img_sz = self.get_parameter('imgsz').get_parameter_value().integer_value
-        dev = self.get_parameter('device').get_parameter_value().string_value
-
-        # Realizar la inferencia con YOLO
-        results = self.model(frame, device=dev, imgsz=img_sz, verbose=False)[0]
 
         # Contadores para las métricas de detección
         stats = {
@@ -137,50 +135,60 @@ class DetectionNode(Node):
             "animals": 0
         }
 
-        # Dibujar cuadritos y etiquetas en base a las detecciones
-        for box in results.boxes:
-            conf = float(box.conf[0])
-            if conf < conf_thresh:
-                continue
+        if self.enable_yolo and self.model is not None:
+            # Parámetros dinámicos
+            conf_thresh = self.get_parameter('conf_threshold').get_parameter_value().double_value
+            lying_ratio = self.get_parameter('lying_down_ratio').get_parameter_value().double_value
+            img_sz = self.get_parameter('imgsz').get_parameter_value().integer_value
+            dev = self.get_parameter('device').get_parameter_value().string_value
 
-            cls_id = int(box.cls[0])
-            # Solo procesamos si está dentro de nuestras clases de interés
-            if cls_id not in self.class_mapping:
-                continue
+            # Realizar la inferencia con YOLO
+            results = self.model(frame, device=dev, imgsz=img_sz, verbose=False)[0]
 
-            # Obtener coordenadas de la caja de detección
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            w = x2 - x1
-            h = y2 - y1
+            # Dibujar cuadritos y etiquetas en base a las detecciones
+            for box in results.boxes:
+                conf = float(box.conf[0])
+                if conf < conf_thresh:
+                    continue
 
-            label = self.class_mapping[cls_id]
-            color = (0, 255, 0) # Verde por defecto (Vehículos y animales)
+                cls_id = int(box.cls[0])
+                # Solo procesamos si está dentro de nuestras clases de interés
+                if cls_id not in self.class_mapping:
+                    continue
 
-            if cls_id == 0: # Persona
-                # Comprobamos si está recostada analizando la relación de aspecto de la caja
-                ratio = float(w) / float(h) if h > 0 else 0.0
-                if ratio > lying_ratio:
-                    label = "Persona (Recostada)"
-                    color = (0, 0, 255) # Rojo para advertencia de persona recostada
-                    stats["people_lying"] += 1
-                else:
-                    label = "Persona (De pie/Sentada)"
-                    color = (0, 255, 0) # Verde
-                    stats["people_standing"] += 1
-            elif cls_id in [2, 3, 5, 7]: # Vehículos
-                stats["vehicles"] += 1
-                color = (255, 255, 0) # Celeste/Cyan para vehículos
-            elif cls_id in [14, 15, 16, 17, 18, 19]: # Animales
-                stats["animals"] += 1
-                color = (255, 0, 255) # Magenta para animales
+                # Obtener coordenadas de la caja de detección
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                w = x2 - x1
+                h = y2 - y1
 
-            # Dibujar el rectángulo ("cuadrito")
-            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-            
-            # Poner texto informativo
-            caption = f"{label} {conf:.2f}"
-            cv2.putText(frame, caption, (x1, max(y1 - 10, 15)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                label = self.class_mapping[cls_id]
+                color = (0, 255, 0) # Verde por defecto (Vehículos y animales)
+
+                if cls_id == 0: # Persona
+                    # Comprobamos si está recostada analizando la relación de aspecto de la caja
+                    ratio = float(w) / float(h) if h > 0 else 0.0
+                    if ratio > lying_ratio:
+                        label = "Persona (Recostada)"
+                        color = (0, 0, 255) # Rojo para advertencia de persona recostada
+                        stats["people_lying"] += 1
+                    else:
+                        label = "Persona (De pie/Sentada)"
+                        color = (0, 255, 0) # Verde
+                        stats["people_standing"] += 1
+                elif cls_id in [2, 3, 5, 7]: # Vehículos
+                    stats["vehicles"] += 1
+                    color = (255, 255, 0) # Celeste/Cyan para vehículos
+                elif cls_id in [14, 15, 16, 17, 18, 19]: # Animales
+                    stats["animals"] += 1
+                    color = (255, 0, 255) # Magenta para animales
+
+                # Dibujar el rectángulo ("cuadrito")
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                
+                # Poner texto informativo
+                caption = f"{label} {conf:.2f}"
+                cv2.putText(frame, caption, (x1, max(y1 - 10, 15)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
         # Publicar los datos estructurados en formato JSON (muy útil para el frontend de la MacBook)
         json_msg = String()
