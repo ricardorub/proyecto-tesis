@@ -32,7 +32,9 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'camera_ip': '192.168.1.3',
-                'camera_port': 81
+                'camera_port': 81,
+                'camera_user': 'admin',
+                'camera_password': 'admin123'
             }]
         ),
         
@@ -43,7 +45,7 @@ def generate_launch_description():
             name='detection_node',
             output='screen',
             parameters=[{
-                'rtsp_url': 'rtsp://192.168.1.3:554/11',
+                'rtsp_url': 'rtsp://admin:admin123@192.168.1.3:554/11',
                 'model_name': 'yolov8n.pt',
                 'conf_threshold': 0.25,
                 'lying_down_ratio': 1.2,

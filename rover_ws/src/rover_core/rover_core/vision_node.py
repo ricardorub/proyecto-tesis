@@ -5,14 +5,17 @@ from std_srvs.srv import Trigger
 import urllib.request
 import urllib.error
 import threading
+import base64
 
 class CameraControlNode(Node):
     def __init__(self):
         super().__init__('camera_control_node')
         
-        # Parámetros para la IP y puerto de la cámara
+        # Parámetros para la IP, puerto y credenciales de la cámara
         self.declare_parameter('camera_ip', '192.168.1.3')
         self.declare_parameter('camera_port', 81)
+        self.declare_parameter('camera_user', 'admin')
+        self.declare_parameter('camera_password', 'admin123')
         
         # Suscriptor al tema /camera/control
         self.control_sub = self.create_subscription(
@@ -29,7 +32,7 @@ class CameraControlNode(Node):
         self.srv_right = self.create_service(Trigger, '/camera/move_right', self.move_right_callback)
         self.srv_stop = self.create_service(Trigger, '/camera/stop', self.stop_callback)
         
-        self.get_logger().info("Nodo de Control de Cámara IP iniciado.")
+        self.get_logger().info("Nodo de Control de Cámara IP iniciado con soporte de credenciales.")
         self.get_logger().info(f"Configuración actual -> IP: {self.get_camera_ip()}, Puerto: {self.get_camera_port()}")
 
     def get_camera_ip(self):
@@ -42,11 +45,21 @@ class CameraControlNode(Node):
         """Envía el comando HTTP de control a la cámara de forma síncrona."""
         ip = self.get_camera_ip()
         port = self.get_camera_port()
-        url = f"http://{ip}:{port}/decoder_control.cgi?command={command_id}"
+        user = self.get_parameter('camera_user').get_parameter_value().string_value
+        pwd = self.get_parameter('camera_password').get_parameter_value().string_value
         
-        self.get_logger().info(f"Enviando comando {command_id} a la cámara: {url}")
+        # Construir la URL incluyendo credenciales en el query string (requerido por CGIs chinos)
+        url = f"http://{ip}:{port}/decoder_control.cgi?command={command_id}&user={user}&pwd={pwd}"
+        
+        self.get_logger().info(f"Enviando comando {command_id} a la cámara: http://{ip}:{port}/decoder_control.cgi?command={command_id}")
         try:
             req = urllib.request.Request(url)
+            
+            # Agregar cabecera Basic Auth por si acaso el firmware lo requiere en headers
+            auth_str = f"{user}:{pwd}"
+            auth_b64 = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
+            req.add_header("Authorization", f"Basic {auth_b64}")
+            
             with urllib.request.urlopen(req, timeout=1.5) as response:
                 status = response.status
                 body = response.read().decode('utf-8', errors='ignore').strip()
