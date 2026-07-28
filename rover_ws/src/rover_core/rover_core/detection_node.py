@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import String
 import cv2
 import threading
@@ -95,6 +95,7 @@ class DetectionNode(Node):
 
         # Publicadores
         self.image_pub = self.create_publisher(Image, '/camera/image_processed', 10)
+        self.image_compressed_pub = self.create_publisher(CompressedImage, '/camera/image_processed/compressed', 10)
         self.detection_pub = self.create_publisher(String, '/camera/detections', 10)
 
         # Mapeo de Clases COCO traducidas
@@ -190,7 +191,7 @@ class DetectionNode(Node):
         self.publish_image(frame)
 
     def publish_image(self, frame):
-        """Serializa la imagen de OpenCV directamente a un mensaje sensor_msgs/Image para ROS 2."""
+        """Serializa la imagen de OpenCV a sensor_msgs/Image y sensor_msgs/CompressedImage."""
         msg = Image()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "camera_link"
@@ -201,6 +202,16 @@ class DetectionNode(Node):
         msg.step = frame.shape[1] * 3
         msg.data = frame.tobytes()
         self.image_pub.publish(msg)
+
+        # Publicar imagen comprimida (JPEG) para consumo web eficiente
+        ret, jpeg_buf = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+        if ret:
+            comp_msg = CompressedImage()
+            comp_msg.header.stamp = msg.header.stamp
+            comp_msg.header.frame_id = "camera_link"
+            comp_msg.format = "jpeg"
+            comp_msg.data = jpeg_buf.tobytes()
+            self.image_compressed_pub.publish(comp_msg)
 
     def destroy_node(self):
         if hasattr(self, 'camera') and self.camera is not None:

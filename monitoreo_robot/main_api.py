@@ -394,14 +394,14 @@ def index():
                 <div class="card">
                     <div class="card-title">Cámara en Tiempo Real</div>
                     <div class="video-container">
-                        <!-- Stream servido por FastAPI -->
-                        <img id="video-feed" class="video-stream" src="/video_feed" alt="Video Stream" onerror="handleStreamError()">
-                        <div id="video-placeholder" class="video-placeholder" style="display: none;">
+                        <!-- Stream comprimido a través de ROS 2 WebSockets (de baja latencia y sin conflictos de IP) -->
+                        <img id="video-feed" class="video-stream" src="" alt="Video Stream" style="display: none;">
+                        <div id="video-placeholder" class="video-placeholder" style="display: flex;">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="m22 8-6 4 6 4V8Z"/>
                                 <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
                             </svg>
-                            <p>Esperando conexión del stream de cámara...</p>
+                            <p>Esperando conexión del stream de cámara (ROS)...</p>
                         </div>
                     </div>
                 </div>
@@ -527,6 +527,12 @@ def index():
                 messageType: 'std_msgs/String'
             });
 
+            var imageCompressedTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/camera/image_processed/compressed',
+                messageType: 'sensor_msgs/msg/CompressedImage'
+            });
+
             // Suscribirse a las detecciones de YOLO
             detectionsTopic.subscribe(function(message) {
                 try {
@@ -538,6 +544,14 @@ def index():
                 } catch(e) {
                     console.error("Error procesando mensaje de detecciones: ", e);
                 }
+            });
+
+            // Suscribirse al stream de imagen comprimida en tiempo real
+            imageCompressedTopic.subscribe(function(message) {
+                var img = document.getElementById('video-feed');
+                img.src = 'data:image/jpeg;base64,' + message.data;
+                img.style.display = 'block';
+                document.getElementById('video-placeholder').style.display = 'none';
             });
 
             // Enviar velocidades al Rover (/cmd_vel)
