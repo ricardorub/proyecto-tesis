@@ -12,8 +12,16 @@ def generate_launch_description():
         description='Iniciar el puente serial con el ESP32 (true/false)'
     )
 
+    # Parámetro para activar/desactivar el LIDAR RPLidar C1
+    use_lidar_arg = DeclareLaunchArgument(
+        'use_lidar',
+        default_value='true',
+        description='Iniciar el LIDAR RPLidar C1 (true/false)'
+    )
+
     return LaunchDescription([
         use_serial_arg,
+        use_lidar_arg,
 
         # 1. Iniciar el puente Serial con el ESP32 (Solo si use_serial es true)
         Node(
@@ -62,5 +70,23 @@ def generate_launch_description():
             name='rosbridge_websocket',
             output='screen',
             parameters=[{'port': 9090}]
+        ),
+
+        # 5. Iniciar el Lidar RPLidar C1 (Solo si use_lidar es true)
+        Node(
+            package='rplidar_ros',
+            executable='rplidar_node',
+            name='rplidar_node',
+            output='screen',
+            parameters=[{
+                'channel_type': 'serial',
+                'serial_port': '/dev/ttyUSB0',
+                'serial_baudrate': 460800,
+                'frame_id': 'laser_link',
+                'inverted': False,
+                'angle_compensate': True,
+                'scan_mode': 'Standard'
+            }],
+            condition=IfCondition(LaunchConfiguration('use_lidar'))
         ),
     ])
