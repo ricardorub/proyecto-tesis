@@ -48,10 +48,20 @@ class CameraControlNode(Node):
         user = self.get_parameter('camera_user').get_parameter_value().string_value
         pwd = self.get_parameter('camera_password').get_parameter_value().string_value
         
-        # Construir la URL incluyendo credenciales en el query string (requerido por CGIs chinos)
-        url = f"http://{ip}:{port}/decoder_control.cgi?command={command_id}&user={user}&pwd={pwd}"
+        # Mapeo de comando a acción para protocolo Hipcam (HiSilicon)
+        action_map = {
+            0: 'up',
+            1: 'down',
+            2: 'left',
+            3: 'right',
+            4: 'stop'
+        }
+        act = action_map.get(command_id, 'stop')
         
-        self.get_logger().info(f"Enviando comando {command_id} a la cámara: http://{ip}:{port}/decoder_control.cgi?command={command_id}")
+        # Construir la URL con el protocolo Hipcam
+        url = f"http://{ip}:{port}/web/cgi-bin/hi3510/ptzctrl.cgi?-step=0&-act={act}&-speed=45"
+        
+        self.get_logger().info(f"Enviando comando {command_id} ({act}) a la cámara: {url}")
         try:
             req = urllib.request.Request(url)
             
