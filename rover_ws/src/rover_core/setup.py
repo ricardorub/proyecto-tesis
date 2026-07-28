@@ -28,6 +28,8 @@ setup(
         'console_scripts': [
             # Aquí registramos nuestro nodo de Python para poder ejecutarlo
             'serial_bridge = rover_core.serial_bridge:main',
+            'vision_node = rover_core.vision_node:main',
+            'detection_node = rover_core.detection_node:main',
         ],
     },
 )
