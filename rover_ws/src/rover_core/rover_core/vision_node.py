@@ -15,7 +15,7 @@ class CameraControlNode(Node):
         self.declare_parameter('camera_ip', '192.168.1.3')
         self.declare_parameter('camera_port', 81)
         self.declare_parameter('camera_user', 'admin')
-        self.declare_parameter('camera_password', 'admin123')
+        self.declare_parameter('camera_password', '123456')
         
         # Suscriptor al tema /camera/control
         self.control_sub = self.create_subscription(
