@@ -16,7 +16,7 @@ class RobotNetworkService {
   int _rosPort = ConfigService.defaultRosPort;
 
   bool _isConnected = false;
-  SlamMode _currentMode = SlamMode.autonomous;
+  SlamMode _currentMode = SlamMode.manual;
   bool _isMapping = true;
   String _lastCommand = 'stop';
   
@@ -201,6 +201,33 @@ class RobotNetworkService {
       _addLog('Error al finalizar mapeo: $e');
     }
     return false;
+  }
+
+  Future<bool> disconnectHotspotAndReconnectMainNetwork() async {
+    _addLog('📡 Desactivando Hotspot RoverNet y reconectando la laptop a la red principal...');
+    final url = Uri.parse('http://$_ip:$_httpPort/api/system/disconnect_hotspot');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': 'disable_hotspot', 'reconnect_wifi': true}),
+      ).timeout(const Duration(seconds: 4));
+
+      _rosSocket?.sink.close();
+      _isConnected = false;
+      _connectionStreamController.add(false);
+
+      if (response.statusCode == 200) {
+        _addLog('✅ Hotspot desactivado. Laptop reconectada a la red principal.');
+        return true;
+      }
+    } catch (e) {
+      _addLog('Se envió la señal de desconexión del hotspot ($e).');
+    }
+    _rosSocket?.sink.close();
+    _isConnected = false;
+    _connectionStreamController.add(false);
+    return true;
   }
 
   void _connectRosbridgeWebSocket() {

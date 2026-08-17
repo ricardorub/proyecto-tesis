@@ -6,8 +6,8 @@ import '../widgets/top_app_bar_trio.dart';
 import '../widgets/dpad_overlay_left.dart';
 import '../widgets/slam_map_painter.dart';
 import '../widgets/finish_map_dialog.dart';
-import '../widgets/autonomous_action_dialog.dart';
 import 'settings_dialog.dart';
+import 'start_screen.dart';
 
 class SlamControlScreen extends StatefulWidget {
   const SlamControlScreen({super.key});
@@ -20,15 +20,15 @@ class _SlamControlScreenState extends State<SlamControlScreen> {
   final _netService = RobotNetworkService();
   bool _isConnected = false;
 
-  // Iniciar por defecto en la FUNCIÓN AUTÓNOMO
-  SlamMode _currentMode = SlamMode.autonomous;
+  // Iniciar por defecto en Modo MANUAL
+  SlamMode _currentMode = SlamMode.manual;
   bool _useJoystick = false;
 
   // Estado interno de la función de ESCANEO (false = INICIAR, true = CONCLUIDO)
   bool _isScanStarted = false;
 
-  // Estado interno de la navegación autónoma (Inicia activa por defecto)
-  bool _isAutonomousRunning = true;
+  // Estado interno de la navegación autónoma
+  bool _isAutonomousRunning = false;
 
   @override
   void initState() {
@@ -51,36 +51,6 @@ class _SlamControlScreenState extends State<SlamControlScreen> {
   }
 
   void _onModeSelected(SlamMode newMode) {
-    // REGLA: Si el modo AUTÓNOMO está en ejecución, primero se debe presionar DETENER para cambiar de función
-    if (_isAutonomousRunning && newMode != SlamMode.autonomous) {
-      _confirmAutonomousAction(
-        isStopping: true,
-        onConfirmed: () {
-          // Si intenta ir a MANUAL y el escaneo aún sigue abierto
-          if (newMode == SlamMode.manual && _isScanStarted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('⚠️ Para usar el Modo MANUAL primero debes presionar CONCLUIDO y finalizar el escaneo de mapa.'),
-                backgroundColor: AppTheme.crimsonRed,
-                duration: Duration(seconds: 3),
-              ),
-            );
-            setState(() => _isAutonomousRunning = false);
-            return;
-          }
-
-          setState(() {
-            _currentMode = newMode;
-            _isAutonomousRunning = false;
-          });
-          _netService.setMode(newMode);
-          _netService.sendDirectionCommand('stop');
-        },
-      );
-      return;
-    }
-
-    // REGLA: Para usar el Modo MANUAL debe estar desactivado tanto AUTÓNOMO como ESCANEO
     if (newMode == SlamMode.manual && _isScanStarted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -99,18 +69,6 @@ class _SlamControlScreenState extends State<SlamControlScreen> {
   }
 
   void _startScan() {
-    // REGLA: No iniciar escaneo si AUTÓNOMO está activo
-    if (_isAutonomousRunning) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ No se puede iniciar el escaneo de mapa. Primero debes presionar DETENER en la Función AUTÓNOMA.'),
-          backgroundColor: AppTheme.crimsonRed,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
     setState(() => _isScanStarted = true);
     _netService.setMode(SlamMode.scan);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -119,53 +77,6 @@ class _SlamControlScreenState extends State<SlamControlScreen> {
         backgroundColor: AppTheme.amberWarning,
       ),
     );
-  }
-
-  void _confirmAutonomousAction({
-    required bool isStopping,
-    required VoidCallback onConfirmed,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) => AutonomousActionDialog(
-        isStopping: isStopping,
-        onConfirm: onConfirmed,
-      ),
-    );
-  }
-
-  void _toggleAutonomousAction() {
-    if (_isAutonomousRunning) {
-      // Confirmación para DETENER
-      _confirmAutonomousAction(
-        isStopping: true,
-        onConfirmed: () {
-          setState(() => _isAutonomousRunning = false);
-          _netService.sendDirectionCommand('stop');
-        },
-      );
-    } else {
-      // REGLA: No activar autónomo si el escaneo está activo
-      if (_isScanStarted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('⚠️ No se puede activar la Función AUTÓNOMA mientras el escaneo de mapa está en curso. Presiona CONCLUIDO primero.'),
-            backgroundColor: AppTheme.crimsonRed,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        return;
-      }
-
-      // Confirmación para ACTIVAR
-      _confirmAutonomousAction(
-        isStopping: false,
-        onConfirmed: () {
-          setState(() => _isAutonomousRunning = true);
-          _netService.setMode(SlamMode.autonomous);
-        },
-      );
-    }
   }
 
   void _onCommandSent(String cmd) {
@@ -205,6 +116,65 @@ class _SlamControlScreenState extends State<SlamControlScreen> {
     showDialog(
       context: context,
       builder: (context) => const SettingsDialog(),
+    );
+  }
+
+  void _onExit() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.cardDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: AppTheme.crimsonRed),
+            SizedBox(width: 10),
+            Text(
+              'Desconectar Hotspot',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          '¿Deseas salir del control y desactivar el Hotspot RoverNet para que la laptop de a bordo se reconecte a la red principal?',
+          style: TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CANCELAR', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('📡 Desactivando Hotspot RoverNet y reconectando la laptop...'),
+                  backgroundColor: AppTheme.crimsonRed,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+
+              await _netService.disconnectHotspotAndReconnectMainNetwork();
+
+              await SystemChrome.setPreferredOrientations([
+                DeviceOrientation.portraitUp,
+                DeviceOrientation.portraitDown,
+              ]);
+
+              if (!mounted || !context.mounted) return;
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const StartScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.crimsonRed,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('SALIR Y RECONECTAR'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -261,6 +231,7 @@ class _SlamControlScreenState extends State<SlamControlScreen> {
                   onToggleJoystick: (val) {
                     setState(() => _useJoystick = val);
                   },
+                  onExit: _onExit,
                 ),
               ),
 
@@ -275,39 +246,7 @@ class _SlamControlScreenState extends State<SlamControlScreen> {
                 ),
               ),
 
-              // 4. MODO AUTÓNOMO: BOTÓN DETENER / ACTIVAR CON CONFIRMACIÓN
-              if (isAutonomous)
-                Positioned(
-                  right: 20,
-                  bottom: 20,
-                  child: ElevatedButton.icon(
-                    onPressed: _toggleAutonomousAction,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isAutonomousRunning
-                          ? AppTheme.crimsonRed
-                          : AppTheme.neonIndigo,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: Colors.white, width: 2),
-                      ),
-                      elevation: 8,
-                    ),
-                    icon: Icon(
-                      _isAutonomousRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                      size: 26,
-                    ),
-                    label: Text(
-                      _isAutonomousRunning ? 'DETENER' : 'ACTIVAR',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                ),
+
 
               // 5. BADGE DE JOYSTICK ACTIVO
               if (_useJoystick && !isAutonomous && !_isAutonomousRunning)

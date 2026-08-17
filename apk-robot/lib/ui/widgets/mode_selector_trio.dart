@@ -39,15 +39,7 @@ class ModeSelectorTrio extends StatelessWidget {
             icon: Icons.sports_esports_rounded,
             activeColor: AppTheme.neonCyan,
           ),
-          const SizedBox(height: 6),
 
-          // 3. Botón FUNCIÓN AUTÓNOMO
-          _buildButton(
-            mode: SlamMode.autonomous,
-            title: 'AUTÓNOMO',
-            icon: Icons.smart_toy_rounded,
-            activeColor: AppTheme.neonIndigo,
-          ),
         ],
       ),
     );

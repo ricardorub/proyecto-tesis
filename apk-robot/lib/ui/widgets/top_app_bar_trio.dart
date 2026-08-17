@@ -13,6 +13,7 @@ class TopAppBarTrio extends StatelessWidget {
   final VoidCallback onOpenFinishDialog;
   final bool useJoystick;
   final ValueChanged<bool> onToggleJoystick;
+  final VoidCallback? onExit;
 
   const TopAppBarTrio({
     super.key,
@@ -26,6 +27,7 @@ class TopAppBarTrio extends StatelessWidget {
     required this.onOpenFinishDialog,
     required this.useJoystick,
     required this.onToggleJoystick,
+    this.onExit,
   });
 
   @override
@@ -92,7 +94,7 @@ class TopAppBarTrio extends StatelessWidget {
 
           const SizedBox(width: 14),
 
-          // 2. LOS 3 BOTONES DE MODO PRINCIPALES (MANUAL | ESCANEO | AUTÓNOMO)
+          // 2. BOTONES DE MODO PRINCIPALES (MANUAL | ESCANEO | SALIR)
           Expanded(
             child: Row(
               children: [
@@ -110,11 +112,38 @@ class TopAppBarTrio extends StatelessWidget {
                   activeColor: AppTheme.amberWarning,
                 ),
                 const SizedBox(width: 6),
-                _buildModeBtn(
-                  mode: SlamMode.autonomous,
-                  label: 'AUTÓNOMO',
-                  icon: Icons.smart_toy_rounded,
-                  activeColor: AppTheme.neonIndigo,
+                // Botón SALIR (Desactivar Hotspot y Reconectar Laptop)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onExit,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.crimsonRed.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppTheme.crimsonRed,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.logout_rounded, size: 16, color: AppTheme.crimsonRed),
+                          SizedBox(width: 6),
+                          Text(
+                            'SALIR',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

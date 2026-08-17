@@ -5,9 +5,9 @@ class ConfigService {
   static const String keyHttpPort = 'http_port';
   static const String keyRosPort = 'ros_port';
 
-  // IP por defecto para la conexión directa a la ThinkPad T490 (Hotspot / SoftAP)
-  static const String defaultIp = '192.168.4.1';
-  static const int defaultHttpPort = 8000;
+  // IP por defecto para la conexión directa a la laptop de a bordo (Hotspot RoverNet 10.42.0.1)
+  static const String defaultIp = '10.42.0.1';
+  static const int defaultHttpPort = 5000;
   static const int defaultRosPort = 9090;
 
   static Future<String> getRobotIp() async {
