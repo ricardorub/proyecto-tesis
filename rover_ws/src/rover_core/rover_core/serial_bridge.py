@@ -41,7 +41,7 @@ class RoverSerialBridge(Node):
         linear_x = msg.linear.x
         angular_z = msg.angular.z
         
-        # Enviamos la meta. El ESP32 se encargará de la matemática Ackermann.
+        # Enviamos la meta de velocidad lineal y angular. El ESP32 realiza la cinemática diferencial para el Hoverboard.
         command = f"CMD,{linear_x:.3f},{angular_z:.3f}\n"
         self.esp32.write(command.encode('utf-8'))
 

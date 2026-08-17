@@ -89,4 +89,23 @@ def generate_launch_description():
             }],
             condition=IfCondition(LaunchConfiguration('use_lidar'))
         ),
+
+        # 6. Publicar la transformada estática base_link -> laser_link (Solo si use_lidar es true)
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_link_to_laser_link',
+            output='screen',
+            arguments=[
+                '--x', '0.30',
+                '--y', '0.0',
+                '--z', '0.10',
+                '--yaw', '0.0',
+                '--pitch', '0.0',
+                '--roll', '0.0',
+                '--frame-id', 'base_link',
+                '--child-frame-id', 'laser_link'
+            ],
+            condition=IfCondition(LaunchConfiguration('use_lidar'))
+        ),
     ])
