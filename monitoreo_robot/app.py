@@ -217,6 +217,23 @@ def set_slam_mode(payload: SlamModeModel):
         return {"status": "success", "mode": payload.mode}
     return {"status": "error", "message": "Modo inválido. Usa 'scan', 'manual' o 'autonomous'"}
 
+def publish_cmd_vel_ws(linear_x, angular_z):
+    try:
+        import websocket
+        ws = websocket.create_connection("ws://localhost:9090", timeout=0.5)
+        msg = {
+            "op": "publish",
+            "topic": "/cmd_vel",
+            "msg": {
+                "linear": {"x": float(linear_x), "y": 0.0, "z": 0.0},
+                "angular": {"x": 0.0, "y": 0.0, "z": float(angular_z)}
+            }
+        }
+        ws.send(json.dumps(msg))
+        ws.close()
+    except Exception as e:
+        print(f"[SLAM SERVER] Error enviando /cmd_vel a rosbridge: {e}")
+
 @app.post("/api/slam/cmd")
 def send_slam_cmd(payload: SlamCmdModel):
     if slam_state["mode"] == "autonomous":
@@ -227,6 +244,19 @@ def send_slam_cmd(payload: SlamCmdModel):
     slam_state["last_command"] = payload.command
     slam_state["last_updated"] = time.time()
     print(f"[SLAM SERVER] Comando de movimiento en modo {slam_state['mode'].upper()}: {payload.command}")
+
+    cmd_speeds = {
+        "up": (0.3, 0.0),
+        "down": (-0.3, 0.0),
+        "left": (0.0, 0.5),
+        "right": (0.0, -0.5),
+        "stop": (0.0, 0.0)
+    }
+
+    if payload.command in cmd_speeds:
+        vx, vth = cmd_speeds[payload.command]
+        publish_cmd_vel_ws(vx, vth)
+
     return {"status": "success", "command": payload.command}
 
 @app.post("/api/slam/finish")
