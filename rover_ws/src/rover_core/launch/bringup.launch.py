@@ -19,9 +19,17 @@ def generate_launch_description():
         description='Iniciar el LIDAR RPLidar C1 (true/false)'
     )
 
+    # Parámetro para activar/desactivar la Cámara USB y detección de berma
+    use_usb_cam_arg = DeclareLaunchArgument(
+        'use_usb_cam',
+        default_value='true',
+        description='Iniciar la Cámara USB y el nodo de detección de berma/césped (true/false)'
+    )
+
     return LaunchDescription([
         use_serial_arg,
         use_lidar_arg,
+        use_usb_cam_arg,
 
         # 1. Iniciar el puente Serial con el ESP32 (Solo si use_serial es true)
         Node(
@@ -107,5 +115,29 @@ def generate_launch_description():
                 '--child-frame-id', 'laser_link'
             ],
             condition=IfCondition(LaunchConfiguration('use_lidar'))
+        ),
+
+        # 7. Iniciar Driver de Cámara USB (Solo si use_usb_cam es true)
+        Node(
+            package='rover_core',
+            executable='usb_camera_node',
+            name='usb_camera_node',
+            output='screen',
+            parameters=[{
+                'device_id': 0,
+                'frame_width': 640,
+                'frame_height': 480,
+                'fps': 15.0
+            }],
+            condition=IfCondition(LaunchConfiguration('use_usb_cam'))
+        ),
+
+        # 8. Iniciar Nodo de Detección de Berma y Césped (Solo si use_usb_cam es true)
+        Node(
+            package='rover_core',
+            executable='curb_detection_node',
+            name='curb_detection_node',
+            output='screen',
+            condition=IfCondition(LaunchConfiguration('use_usb_cam'))
         ),
     ])

@@ -26,10 +26,11 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            # Aquí registramos nuestro nodo de Python para poder ejecutarlo
             'serial_bridge = rover_core.serial_bridge:main',
             'vision_node = rover_core.vision_node:main',
             'detection_node = rover_core.detection_node:main',
+            'usb_camera_node = rover_core.usb_camera_node:main',
+            'curb_detection_node = rover_core.curb_detection_node:main',
         ],
     },
 )
