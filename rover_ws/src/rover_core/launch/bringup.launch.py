@@ -26,10 +26,18 @@ def generate_launch_description():
         description='Iniciar la Cámara USB y el nodo de detección de berma/césped (true/false)'
     )
 
+    # Parámetro para seleccionar el puerto de la Cámara USB (0 para /dev/video0, 2 para /dev/video2)
+    usb_cam_device_arg = DeclareLaunchArgument(
+        'usb_cam_device',
+        default_value='0',
+        description='ID del dispositivo de la Cámara USB (0 para /dev/video0, 2 para /dev/video2)'
+    )
+
     return LaunchDescription([
         use_serial_arg,
         use_lidar_arg,
         use_usb_cam_arg,
+        usb_cam_device_arg,
 
         # 1. Iniciar el puente Serial con el ESP32 (Solo si use_serial es true)
         Node(
@@ -124,7 +132,7 @@ def generate_launch_description():
             name='usb_camera_node',
             output='screen',
             parameters=[{
-                'device_id': 0,
+                'device_id': LaunchConfiguration('usb_cam_device'),
                 'frame_width': 640,
                 'frame_height': 480,
                 'fps': 15.0
