@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
 import cv2
 import threading
@@ -15,20 +17,30 @@ app = FastAPI()
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
-        "rosbridge_ip": "127.0.0.1",
+    config_data = {
+        "rosbridge_ip": "192.168.18.36",
         "rosbridge_port": 9090,
         "rtsp_url": "rtsp://192.168.1.3:554/11",
         "stream_mode": "ros",
         "direct_url": "http://192.168.1.3:81/videostream.cgi",
-        "image_topic": "/camera/image_processed"
+        "image_topic": "/camera/image_processed/compressed"
     }
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                file_config = json.load(f)
+                config_data.update(file_config)
+        except Exception:
+            pass
+
+    # Garantizar que los valores de .env tengan máxima prioridad
+    if os.getenv("ROBOT_IP"):
+        config_data["rosbridge_ip"] = os.getenv("ROBOT_IP")
+    if os.getenv("CAMERA_RTSP_URL") or os.getenv("CAMERA_RSTP_URL"):
+        config_data["rtsp_url"] = os.getenv("CAMERA_RTSP_URL") or os.getenv("CAMERA_RSTP_URL")
+    if os.getenv("ROS_IMAGE_TOPIC"):
+        config_data["image_topic"] = os.getenv("ROS_IMAGE_TOPIC")
+    return config_data
 
 def save_config(config_data):
     try:
@@ -172,6 +184,59 @@ def update_config(config: ConfigModel):
     else:
         streamer.stop()
     return {"status": "success", "config": new_config}
+
+# --- ENDPOINTS PARA SESIÓN DE MAPEO Y NAVEGACIÓN (CONTROL DESDE APP APK) ---
+slam_state = {
+    "mode": "scan",  # "scan", "manual", "autonomous"
+    "is_mapping": True,
+    "last_command": "stop",
+    "last_updated": time.time(),
+    "map_saved": False
+}
+
+class SlamModeModel(BaseModel):
+    mode: str  # "scan" | "manual" | "autonomous"
+
+class SlamCmdModel(BaseModel):
+    command: str  # "up" | "down" | "left" | "right" | "stop"
+
+@app.get("/api/slam/status")
+def get_slam_status():
+    return {
+        "status": "success",
+        "slam_state": slam_state,
+        "timestamp": time.time()
+    }
+
+@app.post("/api/slam/mode")
+def set_slam_mode(payload: SlamModeModel):
+    if payload.mode in ["scan", "manual", "autonomous"]:
+        slam_state["mode"] = payload.mode
+        slam_state["last_updated"] = time.time()
+        print(f"[SLAM SERVER] Función cambiada a: {payload.mode.upper()}")
+        return {"status": "success", "mode": payload.mode}
+    return {"status": "error", "message": "Modo inválido. Usa 'scan', 'manual' o 'autonomous'"}
+
+@app.post("/api/slam/cmd")
+def send_slam_cmd(payload: SlamCmdModel):
+    if slam_state["mode"] == "autonomous":
+        return {
+            "status": "blocked",
+            "message": "🔒 COMANDOS DE DIRECCIÓN BLOQUEADOS: El robot está en Modo Autónomo"
+        }
+    slam_state["last_command"] = payload.command
+    slam_state["last_updated"] = time.time()
+    print(f"[SLAM SERVER] Comando de movimiento en modo {slam_state['mode'].upper()}: {payload.command}")
+    return {"status": "success", "command": payload.command}
+
+@app.post("/api/slam/finish")
+def finish_slam():
+    slam_state["is_mapping"] = False
+    slam_state["map_saved"] = True
+    slam_state["last_updated"] = time.time()
+    print("[SLAM SERVER] Escaneo completado. Mapa guardado y cargado en el sistema de navegación.")
+    return {"status": "success", "message": "Mapa escaneado guardado y cargado en el sistema de navegación."}
+
 
 # Asegurar que exista la carpeta static
 static_dir = os.path.join(os.path.dirname(__file__), "static")

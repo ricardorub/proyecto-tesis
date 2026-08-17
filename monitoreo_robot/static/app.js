@@ -166,11 +166,28 @@ function connectROSBridge() {
     rosSocket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            if (data.op === 'publish' && data.topic === config.image_topic) {
-                renderROSImage(data.msg);
+            if (data.op === 'publish') {
+                const targetTopic = (config.image_topic || '/camera/image_processed').trim();
+                const incomingTopic = (data.topic || '').trim();
+
+                const isTopicMatch = (
+                    incomingTopic === targetTopic ||
+                    incomingTopic === '/' + targetTopic ||
+                    '/' + incomingTopic === targetTopic ||
+                    incomingTopic.includes('image_processed') ||
+                    incomingTopic.includes('camera')
+                );
+
+                if (isTopicMatch) {
+                    renderROSImage(data.msg);
+                } else {
+                    log(`Mensaje recibido en tópico: ${incomingTopic}`, 'system');
+                }
+            } else if (data.op === 'service_response' || data.op === 'status') {
+                log(`ROSBridge status [${data.op}]: ${JSON.stringify(data)}`, 'system');
             }
         } catch (err) {
-            // Ignorar fallas silenciosamente
+            console.error("Error al procesar websocket msg:", err);
         }
     };
 
@@ -222,8 +239,7 @@ function updateImageSubscription() {
     if (config.stream_mode === 'ros' && config.image_topic) {
         const subscribeMsg = {
             op: 'subscribe',
-            topic: config.image_topic,
-            type: 'sensor_msgs/msg/Image'
+            topic: config.image_topic
         };
         rosSocket.send(JSON.stringify(subscribeMsg));
         subscribedTopic = config.image_topic;
@@ -248,12 +264,17 @@ function advertiseControlTopic() {
     updateImageSubscription();
 }
 
+let hasLoggedFirstFrame = false;
+
 // Renderizar imagen de ROS en el Canvas
 function renderROSImage(msg) {
     if (!canvasCtx || !msg || !msg.data) return;
 
-    // Caso 1: Imagen Comprimida (sensor_msgs/CompressedImage)
-    if (msg.format && (msg.format.includes('jpeg') || msg.format.includes('png') || msg.format.includes('jpg'))) {
+    // Caso 1: Imagen Comprimida (sensor_msgs/CompressedImage) o header Base64 JPEG/PNG
+    const isCompressedFormat = msg.format && (msg.format.includes('jpeg') || msg.format.includes('png') || msg.format.includes('jpg') || msg.format.includes('compressed'));
+    const isBase64ImageHeader = typeof msg.data === 'string' && (msg.data.startsWith('/9j/') || msg.data.startsWith('iVBORw0KGgo'));
+
+    if (isCompressedFormat || isBase64ImageHeader) {
         const img = new Image();
         img.onload = () => {
             if (cameraCanvas.width !== img.width || cameraCanvas.height !== img.height) {
@@ -261,6 +282,10 @@ function renderROSImage(msg) {
                 cameraCanvas.height = img.height;
             }
             canvasCtx.drawImage(img, 0, 0);
+            if (!hasLoggedFirstFrame) {
+                hasLoggedFirstFrame = true;
+                log('¡Fotograma comprimido/JPEG recibido y renderizado!', 'success');
+            }
         };
         img.src = `data:image/jpeg;base64,${msg.data}`;
         return;
@@ -270,37 +295,55 @@ function renderROSImage(msg) {
     const width = msg.width;
     const height = msg.height;
 
+    if (!width || !height) return;
+
     if (cameraCanvas.width !== width || cameraCanvas.height !== height) {
         cameraCanvas.width = width;
         cameraCanvas.height = height;
     }
 
-    const binaryString = atob(msg.data);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+    let bytes;
+    if (typeof msg.data === 'string') {
+        try {
+            const binaryString = atob(msg.data);
+            const len = binaryString.length;
+            bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+        } catch (e) {
+            console.error("Error al decodificar base64 de ROS image:", e);
+            return;
+        }
+    } else if (Array.isArray(msg.data)) {
+        bytes = new Uint8Array(msg.data);
+    } else if (typeof msg.data === 'object') {
+        bytes = new Uint8Array(Object.values(msg.data));
+    } else {
+        return;
     }
 
     const imgData = canvasCtx.createImageData(width, height);
     const data = imgData.data;
 
-    if (msg.encoding === 'bgr8') {
-        for (let i = 0, j = 0; i < len; i += 3, j += 4) {
+    const encoding = (msg.encoding || 'bgr8').toLowerCase();
+
+    if (encoding === 'bgr8' || encoding === '8uc3') {
+        for (let i = 0, j = 0; i < bytes.length; i += 3, j += 4) {
             data[j]     = bytes[i+2]; // R
             data[j+1]   = bytes[i+1]; // G
             data[j+2]   = bytes[i];   // B
             data[j+3]   = 255;        // A
         }
-    } else if (msg.encoding === 'rgb8') {
-        for (let i = 0, j = 0; i < len; i += 3, j += 4) {
+    } else if (encoding === 'rgb8') {
+        for (let i = 0, j = 0; i < bytes.length; i += 3, j += 4) {
             data[j]     = bytes[i];   // R
             data[j+1]   = bytes[i+1]; // G
             data[j+2]   = bytes[i+2]; // B
             data[j+3]   = 255;        // A
         }
-    } else if (msg.encoding === 'mono8') {
-        for (let i = 0, j = 0; i < len; i++, j += 4) {
+    } else if (encoding === 'mono8' || encoding === '8uc1') {
+        for (let i = 0, j = 0; i < bytes.length; i++, j += 4) {
             const val = bytes[i];
             data[j]     = val;
             data[j+1]   = val;
@@ -310,17 +353,17 @@ function renderROSImage(msg) {
     }
 
     canvasCtx.putImageData(imgData, 0, 0);
+
+    if (!hasLoggedFirstFrame) {
+        hasLoggedFirstFrame = true;
+        log(`¡Primer fotograma ROS (${width}x${height} ${encoding}) renderizado en Canvas!`, 'success');
+    }
 }
 
 // Enviar Comando a través de ROSBridge
 function sendCommand(command) {
     if (!isRosConnected) {
         log(`No se puede enviar '${command.toUpperCase()}': ROS Bridge desconectado.`, 'error');
-        return;
-    }
-    
-    // Evitar enviar el mismo comando consecutivamente (a menos que sea stop)
-    if (command === currentCommand && command !== 'stop') {
         return;
     }
     
@@ -399,32 +442,20 @@ configForm.addEventListener('submit', async (e) => {
 
 /* --- LÓGICA DE CONTROL TÁCTIL / RATÓN --- */
 
-// Configurar eventos de mouse y touch para botones direccionales
+// Configurar eventos de click y touch para botones direccionales
 function setupButtonControl(direction) {
     const btn = buttons[direction];
     if (!btn) return;
     
-    const handleStart = (e) => {
+    btn.addEventListener('click', (e) => {
         e.preventDefault();
         sendCommand(direction);
-    };
+    });
     
-    const handleEnd = (e) => {
+    btn.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        // Al soltar un botón direccional, se envía comando 'stop'
-        if (direction !== 'stop') {
-            sendCommand('stop');
-        }
-    };
-    
-    btn.addEventListener('mousedown', handleStart);
-    btn.addEventListener('touchstart', handleStart);
-    
-    if (direction !== 'stop') {
-        btn.addEventListener('mouseup', handleEnd);
-        btn.addEventListener('mouseleave', handleEnd);
-        btn.addEventListener('touchend', handleEnd);
-    }
+        sendCommand(direction);
+    });
 }
 
 // Configurar todos los botones

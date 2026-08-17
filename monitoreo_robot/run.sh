@@ -33,10 +33,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 4. Lanzar servidor FastAPI con Uvicorn
-echo "Iniciando servidor de video y control en http://localhost:5000"
+# 4. Cargar variables de entorno si existe .env
+if [ -f ".env" ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+PORT=${FASTAPI_PORT:-5000}
+
+echo "Iniciando servidor de video y control en http://localhost:$PORT"
 echo "Presiona Ctrl+C para detener el servidor."
 echo "=============================================="
 
 export PYTHONUNBUFFERED=1
-uvicorn app:app --host 0.0.0.0 --port 5000
+uvicorn app:app --host 0.0.0.0 --port $PORT
