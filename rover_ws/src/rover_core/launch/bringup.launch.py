@@ -148,4 +148,12 @@ def generate_launch_description():
             output='screen',
             condition=IfCondition(LaunchConfiguration('use_usb_cam'))
         ),
+
+        # 9. Servidor API Backend HTTP para la APK (Puerto 5000: Estados, D-Pad /cmd_vel y Reconexión WiFi/Hotspot)
+        Node(
+            package='rover_core',
+            executable='api_server',
+            name='api_server_node',
+            output='screen'
+        ),
     ])

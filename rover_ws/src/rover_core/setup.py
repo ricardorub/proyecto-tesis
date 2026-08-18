@@ -31,6 +31,7 @@ setup(
             'detection_node = rover_core.detection_node:main',
             'usb_camera_node = rover_core.usb_camera_node:main',
             'curb_detection_node = rover_core.curb_detection_node:main',
+            'api_server = rover_core.api_server:main',
         ],
     },
 )
