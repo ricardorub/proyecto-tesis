@@ -33,6 +33,20 @@ def generate_launch_description():
         description='Puerto serie del ESP32 (/dev/ttyUSB0 o /dev/ttyUSB1)'
     )
 
+    # Parámetro para activar/desactivar la Cámara USB y detección de berma
+    use_usb_cam_arg = DeclareLaunchArgument(
+        'use_usb_cam',
+        default_value='true',
+        description='Iniciar la Cámara USB y el nodo de detección de berma/césped (true/false)'
+    )
+
+    # Parámetro para seleccionar el puerto de la Cámara USB (0 para /dev/video0, 2 para /dev/video2)
+    usb_cam_device_arg = DeclareLaunchArgument(
+        'usb_cam_device',
+        default_value='0',
+        description='ID del dispositivo de la Cámara USB (0 para /dev/video0, 2 para /dev/video2)'
+    )
+
     return LaunchDescription([
         use_serial_arg,
         use_lidar_arg,
