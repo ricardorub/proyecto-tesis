@@ -11,9 +11,11 @@ class RoverSerialBridge(Node):
         super().__init__('rover_serial_bridge')
         
         # --- CONFIGURACIÓN DEL PUERTO USB ---
-        # Ajusta esto si tu ESP32 se conecta como /dev/ttyACM0
-        self.serial_port = '/dev/ttyUSB0'
-        self.baud_rate = 115200
+        self.declare_parameter('serial_port', '/dev/ttyUSB0')
+        self.declare_parameter('baud_rate', 115200)
+
+        self.serial_port = self.get_parameter('serial_port').get_parameter_value().string_value
+        self.baud_rate = self.get_parameter('baud_rate').get_parameter_value().integer_value
         
         try:
             self.esp32 = serial.Serial(self.serial_port, self.baud_rate, timeout=0.1)

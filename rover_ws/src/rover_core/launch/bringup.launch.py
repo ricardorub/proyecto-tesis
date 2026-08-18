@@ -19,18 +19,18 @@ def generate_launch_description():
         description='Iniciar el LIDAR RPLidar C1 (true/false)'
     )
 
-    # Parámetro para activar/desactivar la Cámara USB y detección de berma
-    use_usb_cam_arg = DeclareLaunchArgument(
-        'use_usb_cam',
-        default_value='true',
-        description='Iniciar la Cámara USB y el nodo de detección de berma/césped (true/false)'
+    # Parámetro para seleccionar el puerto del LiDAR RPLidar C1 (/dev/ttyUSB1 por defecto cuando el ESP32 está en /dev/ttyUSB0)
+    lidar_serial_port_arg = DeclareLaunchArgument(
+        'lidar_serial_port',
+        default_value='/dev/ttyUSB1',
+        description='Puerto serie del RPLidar C1 (/dev/ttyUSB1 o /dev/ttyUSB0)'
     )
 
-    # Parámetro para seleccionar el puerto de la Cámara USB (0 para /dev/video0, 2 para /dev/video2)
-    usb_cam_device_arg = DeclareLaunchArgument(
-        'usb_cam_device',
-        default_value='0',
-        description='ID del dispositivo de la Cámara USB (0 para /dev/video0, 2 para /dev/video2)'
+    # Parámetro para seleccionar el puerto del ESP32
+    esp32_serial_port_arg = DeclareLaunchArgument(
+        'esp32_serial_port',
+        default_value='/dev/ttyUSB0',
+        description='Puerto serie del ESP32 (/dev/ttyUSB0 o /dev/ttyUSB1)'
     )
 
     return LaunchDescription([
@@ -38,6 +38,8 @@ def generate_launch_description():
         use_lidar_arg,
         use_usb_cam_arg,
         usb_cam_device_arg,
+        lidar_serial_port_arg,
+        esp32_serial_port_arg,
 
         # 1. Iniciar el puente Serial con el ESP32 (Solo si use_serial es true)
         Node(
@@ -45,6 +47,9 @@ def generate_launch_description():
             executable='serial_bridge',
             name='serial_bridge',
             output='screen',
+            parameters=[{
+                'serial_port': LaunchConfiguration('esp32_serial_port')
+            }],
             condition=IfCondition(LaunchConfiguration('use_serial'))
         ),
         
@@ -96,7 +101,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'channel_type': 'serial',
-                'serial_port': '/dev/ttyUSB0',
+                'serial_port': LaunchConfiguration('lidar_serial_port'),
                 'serial_baudrate': 460800,
                 'frame_id': 'laser_link',
                 'inverted': False,
