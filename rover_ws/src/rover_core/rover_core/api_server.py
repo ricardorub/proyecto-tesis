@@ -93,6 +93,14 @@ class APIRequestHandler(BaseHTTPRequestHandler):
                 "message": "Mapa escaneado guardado y cargado en el sistema de navegación."
             }).encode('utf-8'))
 
+        elif self.path == '/api/system/activate_hotspot':
+            self._set_headers(200)
+            self.wfile.write(json.dumps({
+                "status": "success",
+                "message": "Activando Hotspot RoverNet..."
+            }).encode('utf-8'))
+            threading.Thread(target=self.enable_hotspot).start()
+
         elif self.path == '/api/system/disconnect_hotspot':
             self._set_headers(200)
             self.wfile.write(json.dumps({
@@ -106,6 +114,14 @@ class APIRequestHandler(BaseHTTPRequestHandler):
         else:
             self._set_headers(404)
             self.wfile.write(json.dumps({"status": "error", "message": "Ruta POST no encontrada"}).encode('utf-8'))
+
+    def enable_hotspot(self):
+        time.sleep(0.5)
+        print("[API SERVER] Activando Hotspot RoverNet desde petición de APK...")
+        try:
+            subprocess.run(["nmcli", "connection", "up", "Hotspot"], check=False)
+        except Exception as e:
+            print(f"[API SERVER] Error activando Hotspot: {e}")
 
     def switch_wifi_networks(self):
         time.sleep(0.5)
